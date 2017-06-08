@@ -6,14 +6,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.util.Log;
-import android.webkit.URLUtil;
 import android.widget.Toast;
 
+import com.tencent.mm.opensdk.modelmsg.SendAuth;
 import com.tencent.mm.opensdk.modelmsg.SendMessageToWX;
 import com.tencent.mm.opensdk.modelmsg.WXMediaMessage;
 import com.tencent.mm.opensdk.modelmsg.WXWebpageObject;
@@ -34,11 +32,15 @@ import java.net.URL;
 public class MainActivity extends UnityPlayerActivity {
     private Toast mToast;
     private static final int THUMB_SIZE = 150;
-    private static final String Wechat_AppID = "wx0f9801acb507830f";
+    public static final String Wechat_AppID = "wx0f9801acb507830f";
+    public static  final String Wechat_AppSecreat = "";
     private IWXAPI api;
+
+    public static MainActivity instance = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        instance = this;
         super.onCreate(savedInstanceState);
 //        setContentView(R.layout.activity_main);
         getIntentData();
@@ -87,10 +89,13 @@ public class MainActivity extends UnityPlayerActivity {
     public static void sendMessageToUnity(String data){
         UnityPlayer.UnitySendMessage("GameCenter","OnAndroid2Unity",data);
     }
+    public static void sendMessageToUnity(String data,String funcName){
+        UnityPlayer.UnitySendMessage("GameCenter",funcName,data);
+    }
 
     public void sendWechatInvitation(String title,String desc,String url){
         if (api == null ||url == null || url.isEmpty() ) return;
-        showToast(url);
+        //showToast(url);
 
         WXWebpageObject webpage = new WXWebpageObject();
         webpage.webpageUrl = url;
@@ -124,6 +129,50 @@ public class MainActivity extends UnityPlayerActivity {
     public void regToWX(){
         api = WXAPIFactory.createWXAPI(this,Wechat_AppID,true);
         api.registerApp(Wechat_AppID);
+    }
+
+    public void onWechatLogin(){
+
+        final SendAuth.Req req = new SendAuth.Req();
+        req.scope = "snsapi_userinfo";
+        req.state = "yzkxmj3d_login";
+        api.sendReq(req);
+
+    }
+
+    public void onWechatLoginCallback(String code){
+        //验证
+        if (code.isEmpty()) {
+            showToast("code is empty,Please try again!");
+            return;
+        }
+        sendMessageToUnity(code,"OnAndroid2UnityWechatLogin");
+
+        //验证放在php
+//        String urlStr = String.format("https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code",Wechat_AppID,Wechat_AppSecreat,code);
+//        String result = "";
+//        try {
+//            URL url = new URL(urlStr);
+//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//            InputStreamReader in = new InputStreamReader(connection.getInputStream());
+//            BufferedReader bufferedReader = new BufferedReader(in);
+//            StringBuffer strBuffer = new StringBuffer();
+//            String line = null;
+//            while ((line = bufferedReader.readLine()) != null) {
+//                strBuffer.append(line);
+//            }
+//            result = strBuffer.toString();
+//
+//            //JSONObject json = new JSONObject(result);
+//            //if (json.isNull("access_token")) return;
+//            if (result.isEmpty()) return;
+//            sendMessageToUnity(result,"OnAndroid2UnityWechatLogin");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+
+
     }
 
     private String buildTransaction(final String type) {
